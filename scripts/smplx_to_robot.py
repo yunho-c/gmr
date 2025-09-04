@@ -10,6 +10,7 @@ from general_motion_retargeting import RobotMotionViewer
 from general_motion_retargeting.utils.smpl import load_smplx_file, get_smplx_data_offline_fast
 
 from rich import print
+from pyinstrument import Profiler
 
 if __name__ == "__main__":
 
@@ -57,6 +58,13 @@ if __name__ == "__main__":
         help="Limit the rate of the retargeted robot motion to keep the same as the human motion.",
     )
 
+    parser.add_argument(
+        "--profile",
+        default=False,
+        action="store_true",
+        help="Enable pyinstrument profiling and save results to file.",
+    )
+
     args = parser.parse_args()
 
 
@@ -98,6 +106,13 @@ if __name__ == "__main__":
         if save_dir:  # Only create directory if it's not empty
             os.makedirs(save_dir, exist_ok=True)
         qpos_list = []
+
+    # Initialize profiler if requested
+    profiler = None
+    if args.profile:
+        profiler = Profiler()
+        print("[green]Starting pyinstrument profiling...[/green]")
+        profiler.start()
 
     # Start the viewer
     i = 0
@@ -159,6 +174,27 @@ if __name__ == "__main__":
         with open(args.save_path, "wb") as f:
             pickle.dump(motion_data, f)
         print(f"Saved to {args.save_path}")
+
+    # Stop profiler and save results
+    if profiler is not None:
+        profiler.stop()
+        
+        # Generate output filename
+        smplx_filename = args.smplx_file.split('/')[-1].split('.')[0]
+        profile_html_path = f"profile_{args.robot}_{smplx_filename}.html"
+        profile_txt_path = f"profile_{args.robot}_{smplx_filename}.txt"
+        
+        # Save HTML report (interactive)
+        with open(profile_html_path, 'w') as f:
+            f.write(profiler.output_html())
+        
+        # Save text report (summary)
+        with open(profile_txt_path, 'w') as f:
+            f.write(profiler.output_text(unicode=True, color=False))
+        
+        print(f"[green]Profiling results saved to:[/green]")
+        print(f"  HTML (interactive): {profile_html_path}")
+        print(f"  Text (summary): {profile_txt_path}")
 
     # Print profiling statistics
     retarget.print_profiling_stats()

@@ -8,6 +8,7 @@ from rich import print
 from tqdm import tqdm
 import os
 import numpy as np
+from pyinstrument import Profiler
 
 if __name__ == "__main__":
 
@@ -51,6 +52,13 @@ if __name__ == "__main__":
         help="Path to save the robot motion.",
     )
 
+    parser.add_argument(
+        "--profile",
+        default=False,
+        action="store_true",
+        help="Enable pyinstrument profiling and save results to file.",
+    )
+
 
     args = parser.parse_args()
 
@@ -90,6 +98,13 @@ if __name__ == "__main__":
     fps_display_interval = 2.0  # Display FPS every 2 seconds
 
     print(f"mocap_frame_rate: {motion_fps}")
+
+    # Initialize profiler if requested
+    profiler = None
+    if args.profile:
+        profiler = Profiler()
+        print("[green]Starting pyinstrument profiling...[/green]")
+        profiler.start()
 
     # Create tqdm progress bar for the total number of frames
     pbar = tqdm(total=len(lafan1_data_frames), desc="Retargeting")
@@ -155,6 +170,27 @@ if __name__ == "__main__":
 
     # Close progress bar
     pbar.close()
+
+    # Stop profiler and save results
+    if profiler is not None:
+        profiler.stop()
+        
+        # Generate output filename
+        bvh_filename = args.bvh_file.split('/')[-1].split('.')[0]
+        profile_html_path = f"profile_{args.robot}_{bvh_filename}.html"
+        profile_txt_path = f"profile_{args.robot}_{bvh_filename}.txt"
+        
+        # Save HTML report (interactive)
+        with open(profile_html_path, 'w') as f:
+            f.write(profiler.output_html())
+        
+        # Save text report (summary)
+        with open(profile_txt_path, 'w') as f:
+            f.write(profiler.output_text(unicode=True, color=False))
+        
+        print(f"[green]Profiling results saved to:[/green]")
+        print(f"  HTML (interactive): {profile_html_path}")
+        print(f"  Text (summary): {profile_txt_path}")
 
     # Print profiling statistics
     retargeter.print_profiling_stats()
