@@ -47,6 +47,12 @@ IK_CONFIG_DICT = {
         "unitree_g1": IK_CONFIG_ROOT / "fbx_to_g1.json",
         "unitree_g1_with_hands": IK_CONFIG_ROOT / "fbx_to_g1.json",
     },
+    "openxr":{
+        "unitree_g1": IK_CONFIG_ROOT / "openxr_to_g1.json",
+        "unitree_g1_with_hands": IK_CONFIG_ROOT / "openxr_to_g1.json",
+        "unitree_h1": IK_CONFIG_ROOT / "openxr_to_h1.json",
+        "booster_t1": IK_CONFIG_ROOT / "openxr_to_t1.json",
+    },
 }
 
 
