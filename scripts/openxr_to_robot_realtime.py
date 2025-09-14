@@ -67,6 +67,7 @@ def on_body_pose_message(message: bytes, state: AppState):
         if isinstance(message, bytes):
             # Convert Unity coordinates (z_up=True matches your example)
             pose_data = deserialize_pose_data(message, z_up=True)
+            # pose_data = deserialize_pose_data(message, z_up=False)
             
             # Convert to GMR format
             gmr_frame = convert_openxr_pose_to_gmr_format(pose_data)
@@ -94,8 +95,19 @@ def main(args):
     if not OPENXR_AVAILABLE:
         print("OpenXR library not available. Please check installation.")
         return
+    
+    # Validate CLI args
+    if args.position_only and args.rotation_only:
+        print("ERROR: Cannot use both --position-only and --rotation-only at the same time")
+        return
         
-    print("Starting OpenXR real-time motion retargeting...")
+    debug_mode = ""
+    if args.position_only:
+        debug_mode = " (POSITION-ONLY MODE)"
+    elif args.rotation_only:
+        debug_mode = " (ROTATION-ONLY MODE)"
+        
+    print(f"Starting OpenXR real-time motion retargeting{debug_mode}...")
     print("Waiting for OpenXR connection...")
     
     # Initialize retargeting system (will be set up once we get first frame)
@@ -144,6 +156,16 @@ def main(args):
                         tgt_robot=args.robot,
                         actual_human_height=human_height,
                     )
+                    
+                    # Apply debugging weight overrides
+                    if args.position_only:
+                        print("Applying POSITION-ONLY constraints...")
+                        for task in retargeter.tasks1 + retargeter.tasks2:
+                            task.orientation_cost = 0
+                    elif args.rotation_only:
+                        print("Applying ROTATION-ONLY constraints...")
+                        for task in retargeter.tasks1 + retargeter.tasks2:
+                            task.position_cost = 0
                     
                     # Initialize viewer
                     viewer = RobotMotionViewer(
@@ -195,6 +217,16 @@ if __name__ == "__main__":
                 "engineai_pm01", "kuavo_s45", "hightorque_hi", "galaxea_r1pro", "berkeley_humanoid_lite", "booster_k1"],
         default="unitree_g1",
         help="Target robot for motion retargeting"
+    )
+    parser.add_argument(
+        "--position-only",
+        action="store_true",
+        help="Use only position constraints for retargeting (ignore rotations)"
+    )
+    parser.add_argument(
+        "--rotation-only", 
+        action="store_true",
+        help="Use only rotation constraints for retargeting (ignore positions)"
     )
     
     args = parser.parse_args()
